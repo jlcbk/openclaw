@@ -249,6 +249,12 @@
         "type": "integer",
         "minimum": 1
       },
+      "staleCallReaperSeconds": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 0,
+        "description": "When > 0, ends calls older than this many seconds to prevent stuck calls when terminal webhooks are missing."
+      },
       "silenceTimeoutMs": {
         "type": "integer",
         "minimum": 1
