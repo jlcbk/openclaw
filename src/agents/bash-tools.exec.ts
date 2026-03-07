@@ -468,6 +468,38 @@ export function createExecTool(
       // before we execute and burn tokens in cron loops.
       await validateScriptFileForShellBleed({ command: params.command, workdir });
 
+      // Guardrail: a frequent failure mode is that the model sends a fenced code block *as the shell
+      // command*, e.g. a Python snippet starting with `from ...`.
+      // This should never be executed. Prefer writing it to a file with the write tool instead.
+      const trimmedCommand = params.command.trim();
+      const commandLooksLikeFencedCode = /^```[\s\S]*```\s*$/.test(trimmedCommand);
+      if (commandLooksLikeFencedCode) {
+        throw new Error(
+          [
+            "exec refused: command looks like a fenced code block, not a shell command.",
+            "If you meant to create/update a file, use the write tool.",
+          ].join("\n"),
+        );
+      }
+
+      const firstLine = trimmedCommand.split(/\r?\n/, 1)[0] ?? "";
+      const firstLineTrimmed = firstLine.trim();
+      const commandLooksLikeSource =
+        trimmedCommand.includes("\n") &&
+        (/^(from\s+\S+\s+import\s+\S+|import\s+\S+|class\s+\w+|def\s+\w+\s*\(|function\s+\w+\s*\(|const\s+\w+\s*=|let\s+\w+\s*=|export\s+|SELECT\s+\S+)/i.test(
+          firstLineTrimmed,
+        ) ||
+          /:\s*$/.test(firstLineTrimmed));
+      if (commandLooksLikeSource) {
+        throw new Error(
+          [
+            "exec refused: command looks like source code, not a shell command.",
+            `First line: ${truncateMiddle(firstLineTrimmed, 120)}`,
+            "If you meant to write this to a file, use the write tool; if you meant to run a script, run something like `python path/to/file.py`.",
+          ].join("\n"),
+        );
+      }
+
       const run = await runExecProcess({
         command: params.command,
         execCommand: execCommandOverride,
