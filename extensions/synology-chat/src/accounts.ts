@@ -62,7 +62,8 @@ export function resolveAccount(cfg: any, accountId?: string | null): ResolvedSyn
   const envIncomingUrl = process.env.SYNOLOGY_CHAT_INCOMING_URL ?? "";
   const envNasHost = process.env.SYNOLOGY_NAS_HOST ?? "localhost";
   const envAllowedUserIds = process.env.SYNOLOGY_ALLOWED_USER_IDS ?? "";
-  const envRateLimit = process.env.SYNOLOGY_RATE_LIMIT;
+  const envRateLimitRaw = process.env.SYNOLOGY_RATE_LIMIT;
+  const envRateLimit = envRateLimitRaw != null ? parseInt(envRateLimitRaw, 10) : undefined;
   const envBotName = process.env.OPENCLAW_BOT_NAME ?? "OpenClaw";
 
   // Merge: account override > base channel config > env var
@@ -80,7 +81,7 @@ export function resolveAccount(cfg: any, accountId?: string | null): ResolvedSyn
     rateLimitPerMinute:
       accountOverride.rateLimitPerMinute ??
       channelCfg.rateLimitPerMinute ??
-      (envRateLimit ? parseInt(envRateLimit, 10) || 30 : 30),
+      (envRateLimit != null && Number.isFinite(envRateLimit) ? envRateLimit : 30),
     botName: accountOverride.botName ?? channelCfg.botName ?? envBotName,
     allowInsecureSsl: accountOverride.allowInsecureSsl ?? channelCfg.allowInsecureSsl ?? false,
   };
