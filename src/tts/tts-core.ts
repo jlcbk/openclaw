@@ -128,6 +128,13 @@ export function parseTtsDirectives(
     return "";
   });
 
+  // Bare tag enables TTS in "tagged" mode without needing overrides.
+  const bareRegex = /\[\[tts\]\]/gi;
+  cleanedText = cleanedText.replace(bareRegex, () => {
+    hasDirective = true;
+    return "";
+  });
+
   const directiveRegex = /\[\[tts:([^\]]+)\]\]/gi;
   cleanedText = cleanedText.replace(directiveRegex, (_match, body: string) => {
     hasDirective = true;
