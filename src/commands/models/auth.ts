@@ -1,4 +1,9 @@
-import { confirm as clackConfirm, select as clackSelect, text as clackText } from "@clack/prompts";
+import {
+  confirm as clackConfirm,
+  isCancel as clackIsCancel,
+  select as clackSelect,
+  text as clackText,
+} from "@clack/prompts";
 import {
   resolveAgentDir,
   resolveAgentWorkspaceDir,
@@ -98,6 +103,11 @@ export async function modelsAuthSetupTokenCommand(
     message: "Paste Anthropic setup-token",
     validate: (value) => validateAnthropicSetupToken(String(value ?? "")),
   });
+  // clack returns a special cancel symbol when the user aborts the prompt.
+  // Never persist that value into auth-profiles.json.
+  if (clackIsCancel(tokenInput)) {
+    return;
+  }
   const token = String(tokenInput ?? "").trim();
   const profileId = resolveDefaultTokenProfileId(provider);
 
@@ -141,6 +151,11 @@ export async function modelsAuthPasteTokenCommand(
     message: `Paste token for ${provider}`,
     validate: (value) => (value?.trim() ? undefined : "Required"),
   });
+  // clack returns a special cancel symbol when the user aborts the prompt.
+  // Never persist that value into auth-profiles.json.
+  if (clackIsCancel(tokenInput)) {
+    return;
+  }
   const token = String(tokenInput ?? "").trim();
 
   const expires =
