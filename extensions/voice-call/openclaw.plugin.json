@@ -48,6 +48,11 @@
       "label": "Notify Hangup Delay (sec)",
       "advanced": true
     },
+    "staleCallReaperSeconds": {
+      "label": "Stale Call Reaper (sec)",
+      "help": "Ends calls older than this many seconds. Set to 0 to disable.",
+      "advanced": true
+    },
     "serve.port": {
       "label": "Webhook Port"
     },
@@ -248,6 +253,12 @@
       "maxDurationSeconds": {
         "type": "integer",
         "minimum": 1
+      },
+      "staleCallReaperSeconds": {
+        "type": "integer",
+        "minimum": 0,
+        "default": 0,
+        "description": "Maximum age of a call (in seconds) before it is automatically reaped. Set to 0 to disable."
       },
       "silenceTimeoutMs": {
         "type": "integer",
