@@ -258,7 +258,12 @@ export abstract class MemoryManagerSyncOps {
     const dir = path.dirname(dbPath);
     ensureDir(dir);
     const { DatabaseSync } = requireNodeSqlite();
-    return new DatabaseSync(dbPath, { allowExtension: this.settings.store.vector.enabled });
+    const db = new DatabaseSync(dbPath, { allowExtension: this.settings.store.vector.enabled });
+    // busy_timeout is per-connection; set it on every open to avoid immediate SQLITE_BUSY
+    // after restarts (or when multiple OpenClaw processes contend on the same DB).
+    // Keep it small but non-zero; longer writes should still surface quickly.
+    db.exec("PRAGMA busy_timeout = 5000");
+    return db;
   }
 
   private seedEmbeddingCache(sourceDb: DatabaseSync): void {
