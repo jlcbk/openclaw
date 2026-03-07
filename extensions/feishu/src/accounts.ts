@@ -25,6 +25,13 @@ function listConfiguredAccountIds(cfg: ClawdbotConfig): string[] {
  * If no accounts are configured, returns [DEFAULT_ACCOUNT_ID] for backward compatibility.
  */
 export function listFeishuAccountIds(cfg: ClawdbotConfig): string[] {
+  const feishuCfg = cfg.channels?.feishu as FeishuConfig | undefined;
+  // If Feishu isn't configured at all, don't synthesize a default account. This avoids
+  // status output like "default enabled but not configured" when the user hasn't enabled Feishu.
+  if (!feishuCfg || typeof feishuCfg !== "object") {
+    return [];
+  }
+
   const ids = listConfiguredAccountIds(cfg);
   if (ids.length === 0) {
     // Backward compatibility: no accounts configured, use default

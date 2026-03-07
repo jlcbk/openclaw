@@ -72,6 +72,14 @@ describe("resolveDefaultFeishuAccountId", () => {
     expect(resolveDefaultFeishuAccountId(cfg as never)).toBe("default");
   });
 
+  it("returns empty account id list when Feishu config section is missing", async () => {
+    // This ensures `openclaw channels status` does not show a synthetic
+    // default account for Feishu when the user didn't configure Feishu at all.
+    const cfg = { channels: {} };
+    const mod = await import("./accounts.js");
+    expect(mod.listFeishuAccountIds(cfg as never)).toEqual([]);
+  });
+
   it("reports selection source for configured defaults and mapped defaults", () => {
     const explicitDefaultCfg = {
       channels: {
