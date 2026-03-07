@@ -151,6 +151,41 @@ describe("resolveCommandSecretRefsViaGateway", () => {
     }
   });
 
+  it("resolves Telegram botToken env SecretRef via local fallback for status", async () => {
+    const envKey = "TG_TOKEN_1";
+    const priorValue = process.env[envKey];
+    process.env[envKey] = "telegram-token";
+    callGateway.mockRejectedValueOnce(new Error("gateway closed"));
+
+    try {
+      const result = await resolveCommandSecretRefsViaGateway({
+        config: {
+          channels: {
+            telegram: {
+              botToken: { source: "env", provider: "default", id: envKey },
+            },
+          },
+        } as unknown as OpenClawConfig,
+        commandName: "status --json",
+        targetIds: new Set(["channels.telegram.botToken"]),
+        mode: "summary",
+      });
+
+      expect(result.resolvedConfig.channels?.telegram?.botToken).toBe("telegram-token");
+      expect(result.hadUnresolvedTargets).toBe(false);
+      expect(result.targetStatesByPath["channels.telegram.botToken"]).toBe("resolved_local");
+      expect(
+        result.diagnostics.some((entry) => entry.includes("gateway secrets.resolve unavailable")),
+      ).toBe(true);
+    } finally {
+      if (priorValue === undefined) {
+        delete process.env[envKey];
+      } else {
+        process.env[envKey] = priorValue;
+      }
+    }
+  });
+
   it("returns a version-skew hint when gateway does not support secrets.resolve", async () => {
     const envKey = "TALK_API_KEY_UNSUPPORTED";
     const priorValue = process.env[envKey];
