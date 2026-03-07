@@ -217,7 +217,11 @@ async function resolveDaemonProbePassword(params: {
   });
   const password = trimToUndefined(resolved.get(secretRefKey(ref)));
   if (!password) {
-    throw new Error("gateway.auth.password resolved to an empty or non-string value.");
+    throw new Error(
+      `gateway.auth.password SecretRef (${ref.source}:${ref.provider}:${ref.id}) resolved to an empty or non-string value. ` +
+        `Note: gateway.auth.password must resolve to a plain string. ` +
+        `If you intended to use a provider ref object here, prefer OPENCLAW_GATEWAY_PASSWORD (env) or switch to gateway.auth.mode=token.`,
+    );
   }
   return password;
 }

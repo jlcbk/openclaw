@@ -63,7 +63,11 @@ export async function resolveGatewayPasswordSecretRef(params: {
   });
   const value = resolved.get(secretRefKey(ref));
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new Error("gateway.auth.password resolved to an empty or non-string value.");
+    throw new Error(
+      `gateway.auth.password SecretRef (${ref.source}:${ref.provider}:${ref.id}) resolved to an empty or non-string value. ` +
+        `Note: gateway.auth.password is a bootstrap secret and must resolve to a plain string. ` +
+        `If you intended to use a secret provider ref object here, prefer OPENCLAW_GATEWAY_PASSWORD (env) or set gateway.auth.mode=token.`,
+    );
   }
   return withGatewayAuthPassword(params.cfg, value.trim());
 }
