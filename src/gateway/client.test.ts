@@ -413,10 +413,12 @@ describe("GatewayClient connect auth payload", () => {
     ws.emitOpen();
     emitConnectChallenge(ws);
 
+    // Device-token auth should not populate auth.token. auth.token is reserved for
+    // shared gateway credentials.
     expect(connectFrameFrom(ws)).toMatchObject({
-      token: "stored-device-token",
       deviceToken: "stored-device-token",
     });
+    expect(connectFrameFrom(ws).token).toBeUndefined();
     client.stop();
   });
 
@@ -433,9 +435,9 @@ describe("GatewayClient connect auth payload", () => {
     emitConnectChallenge(ws);
 
     expect(connectFrameFrom(ws)).toMatchObject({
-      token: "explicit-device-token",
       deviceToken: "explicit-device-token",
     });
+    expect(connectFrameFrom(ws).token).toBeUndefined();
     client.stop();
   });
 });

@@ -257,9 +257,14 @@ export class GatewayClient {
     // participate when no explicit shared token is provided.
     const resolvedDeviceToken =
       explicitDeviceToken ?? (!explicitGatewayToken ? (storedToken ?? undefined) : undefined);
-    // Legacy compatibility: keep `auth.token` populated for device-token auth when
-    // no explicit shared token is present.
-    const authToken = explicitGatewayToken ?? resolvedDeviceToken;
+    // IMPORTANT: do not copy persisted per-device tokens into `auth.token`.
+    //
+    // When gateway.auth.token is configured, the gateway expects the shared token
+    // in `auth.token`. If we echo a device token into `auth.token`, the gateway
+    // will reject with token_mismatch before it gets a chance to verify the
+    // device token. Only send the shared token in `auth.token`; send per-device
+    // credentials in `auth.deviceToken`.
+    const authToken = explicitGatewayToken;
     const authPassword = this.opts.password?.trim() || undefined;
     const auth =
       authToken || authPassword || resolvedDeviceToken
