@@ -62,8 +62,10 @@ export class OpenAIRealtimeSTTProvider {
     }
     this.apiKey = config.apiKey;
     this.model = config.model || "gpt-4o-transcribe";
-    this.silenceDurationMs = config.silenceDurationMs || 800;
-    this.vadThreshold = config.vadThreshold || 0.5;
+    // NOTE: allow explicit 0 (some users want to disable/override VAD knobs);
+    // use nullish coalescing so `0` doesn't get swallowed by `||`.
+    this.silenceDurationMs = config.silenceDurationMs ?? 800;
+    this.vadThreshold = config.vadThreshold ?? 0.5;
   }
 
   /**
