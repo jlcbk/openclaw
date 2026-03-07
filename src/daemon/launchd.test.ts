@@ -102,6 +102,13 @@ describe("launchd runtime parsing", () => {
       lastExitReason: "exited",
     });
   });
+
+  it("treats pid=0 as missing (stopped)", () => {
+    const output = ["state = running", "pid = 0"].join("\n");
+    expect(parseLaunchctlPrint(output)).toEqual({
+      state: "running",
+    });
+  });
 });
 
 describe("launchctl list detection", () => {
