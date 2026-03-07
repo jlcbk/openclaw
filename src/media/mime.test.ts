@@ -133,6 +133,12 @@ describe("mediaKindFromMime", () => {
     expect(mediaKindFromMime(mime)).toBe(expected);
   });
 
+  it("returns undefined when MIME is missing", () => {
+    expect(mediaKindFromMime(undefined)).toBe(undefined);
+    expect(mediaKindFromMime(null)).toBe(undefined);
+    expect(mediaKindFromMime(" ")).toBe("unknown");
+  });
+
   it("normalizes MIME strings before kind classification", () => {
     expect(kindFromMime(" Audio/Ogg; codecs=opus ")).toBe("audio");
   });
