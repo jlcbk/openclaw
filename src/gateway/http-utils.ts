@@ -15,6 +15,8 @@ export function getHeader(req: IncomingMessage, name: string): string | undefine
 }
 
 export function getBearerToken(req: IncomingMessage): string | undefined {
+  // Many CLIs/shells end up copying tokens with a trailing newline.
+  // Normalize all whitespace so gateway auth comparisons don't fail with token_mismatch.
   const raw = getHeader(req, "authorization")?.trim() ?? "";
   if (!raw.toLowerCase().startsWith("bearer ")) {
     return undefined;
