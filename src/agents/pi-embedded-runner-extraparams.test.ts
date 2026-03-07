@@ -1531,7 +1531,7 @@ describe("applyExtraParamsToAgent", () => {
             api: "openai-codex-responses",
             provider: "openai-codex",
             id: "codex-mini-latest",
-            baseUrl: "https://chatgpt.com/backend-api/codex/responses",
+            baseUrl: "https://chatgpt.com/backend-api/codex/responses", // Codex baseUrl includes /codex/responses path
           } as Model<"openai-codex-responses">,
         }),
     },

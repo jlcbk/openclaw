@@ -154,7 +154,9 @@ function resolveOpenAICodexForwardCompatModel(
     name: trimmedModelId,
     api: "openai-codex-responses",
     provider: normalizedProvider,
-    baseUrl: "https://chatgpt.com/backend-api",
+    // Codex uses a different backend path than direct OpenAI Responses.
+    // See openclaw/openclaw#38706.
+    baseUrl: "https://chatgpt.com/backend-api/codex/responses",
     reasoning: true,
     input: ["text", "image"],
     cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
