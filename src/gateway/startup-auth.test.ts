@@ -106,7 +106,7 @@ describe("ensureGatewayStartupAuth", () => {
     );
   });
 
-  it("resolves gateway.auth.password SecretRef before startup auth checks", async () => {
+  it("resolves gateway.auth.password env SecretRef before startup auth checks", async () => {
     const result = await ensureGatewayStartupAuth({
       cfg: {
         gateway: {
@@ -243,6 +243,32 @@ describe("ensureGatewayStartupAuth", () => {
       }),
     ).rejects.toThrow(/MISSING_GW_TOKEN/i);
     expect(mocks.writeConfigFile).not.toHaveBeenCalled();
+  });
+
+  it("explains that gateway.auth.password SecretRef cannot be resolved at bootstrap when using file/exec providers", async () => {
+    await expect(
+      ensureGatewayStartupAuth({
+        cfg: {
+          gateway: {
+            auth: {
+              mode: "password",
+              password: { source: "exec", provider: "vault", id: "gateway/password" },
+            },
+          },
+          secrets: {
+            providers: {
+              vault: {
+                source: "exec",
+                command: "/usr/bin/false",
+                trustedDirs: ["/usr/bin"],
+              },
+            },
+          },
+        },
+        env: {} as NodeJS.ProcessEnv,
+        persist: true,
+      }),
+    ).rejects.toThrow(/cannot be resolved during gateway startup/i);
   });
 
   it("requires explicit gateway.auth.mode when token and password are both configured", async () => {

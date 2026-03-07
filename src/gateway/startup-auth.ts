@@ -5,7 +5,11 @@ import type {
   OpenClawConfig,
 } from "../config/config.js";
 import { writeConfigFile } from "../config/config.js";
-import { hasConfiguredSecretInput, resolveSecretInputRef } from "../config/types.secrets.js";
+import {
+  coerceSecretRef,
+  hasConfiguredSecretInput,
+  resolveSecretInputRef,
+} from "../config/types.secrets.js";
 import { secretRefKey } from "../secrets/ref-contract.js";
 import { resolveSecretRefValues } from "../secrets/resolve.js";
 import { assertExplicitGatewayAuthModeWhenBothConfigured } from "./auth-mode-policy.js";
@@ -212,6 +216,19 @@ function shouldResolveGatewayPasswordSecretRef(params: {
   if (hasGatewayTokenCandidate(params)) {
     return false;
   }
+
+  // Guardrail: gateway startup auth runs before the full secrets subsystem is necessarily
+  // available. If the password is configured as a secret ref (env/file/exec), attempting
+  // to resolve it here will often fail and produce a misleading "password not configured"
+  // experience. Prefer explicit env (OPENCLAW_GATEWAY_PASSWORD) or a literal string.
+  const passwordRef = coerceSecretRef(
+    params.cfg.gateway?.auth?.password,
+    params.cfg.secrets?.defaults,
+  );
+  if (passwordRef && passwordRef.source !== "env") {
+    return false;
+  }
+
   return true;
 }
 
@@ -231,6 +248,19 @@ async function resolveGatewayPasswordSecretRef(
   if (!shouldResolveGatewayPasswordSecretRef({ cfg, env, authOverride })) {
     return undefined;
   }
+
+  // If gateway.auth.password is a SecretRef, startup auth can only reliably resolve env refs.
+  // File/exec refs depend on providers that may be unavailable at bootstrap time.
+  if (ref.source !== "env") {
+    throw new Error(
+      [
+        "gateway.auth.password is configured as a secret reference that cannot be resolved during gateway startup.",
+        `Ref: ${ref.source}:${ref.provider}:${ref.id}.`,
+        "Fix: set OPENCLAW_GATEWAY_PASSWORD (recommended) or configure gateway.auth.password as a literal string.",
+      ].join(" "),
+    );
+  }
+
   const resolved = await resolveSecretRefValues([ref], {
     config: cfg,
     env,
