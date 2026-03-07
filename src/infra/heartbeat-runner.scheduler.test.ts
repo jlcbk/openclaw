@@ -134,9 +134,13 @@ describe("startHeartbeatRunner", () => {
     expect(runSpy).not.toHaveBeenCalled();
   });
 
-  it("reschedules timer when runOnce returns requests-in-flight", async () => {
+  it("does not advance schedule when runOnce returns requests-in-flight", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(0));
+
+    // If the runner advances schedule on requests-in-flight, it can push nextDueMs
+    // forward repeatedly (combined with the wake retry loop), stalling heartbeats.
+    // Here we assert that a retry can fire soon after the skip.
 
     let callCount = 0;
     const runSpy = vi.fn().mockImplementation(async () => {
@@ -154,12 +158,12 @@ describe("startHeartbeatRunner", () => {
       runOnce: runSpy,
     });
 
-    // First heartbeat returns requests-in-flight
+    // Interval tick triggers first run -> requests-in-flight
     await vi.advanceTimersByTimeAsync(30 * 60_000 + 1_000);
     expect(runSpy).toHaveBeenCalledTimes(1);
 
-    // Timer should be rescheduled; next heartbeat should still fire
-    await vi.advanceTimersByTimeAsync(30 * 60_000 + 1_000);
+    // The wake module schedules a retry after DEFAULT_RETRY_MS (1s).
+    await vi.advanceTimersByTimeAsync(1_000 + 10);
     expect(runSpy).toHaveBeenCalledTimes(2);
 
     runner.stop();
