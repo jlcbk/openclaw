@@ -356,6 +356,7 @@ pnpm test:docker:qr
           capDrop: ["ALL"],
           env: { LANG: "C.UTF-8" },
           setupCommand: "apt-get update && apt-get install -y git curl jq",
+          // 示例加固值（并非默认值）；不填则使用 Docker 默认行为。
           pidsLimit: 256,
           memory: "1g",
           memorySwap: "2g",

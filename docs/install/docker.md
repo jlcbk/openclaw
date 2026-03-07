@@ -584,6 +584,7 @@ If you plan to install packages in `setupCommand`, note:
           capDrop: ["ALL"],
           env: { LANG: "C.UTF-8" },
           setupCommand: "apt-get update && apt-get install -y git curl jq",
+          // Example hardening values (NOT defaults). Omit to leave Docker defaults.
           pidsLimit: 256,
           memory: "1g",
           memorySwap: "2g",

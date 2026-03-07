@@ -2271,6 +2271,7 @@ Z.AI 模型可通过 `zai/<model>` 使用（例如 `zai/glm-4.7`），需要环�
           capDrop: ["ALL"],
           env: { LANG: "C.UTF-8" },
           setupCommand: "apt-get update && apt-get install -y git curl jq",
+          // 示例加固值（并非默认值）；不填则使用 Docker 默认行为。
           // 每智能体覆盖（多智能体）：agents.list[].sandbox.docker.*
           pidsLimit: 256,
           memory: "1g",
