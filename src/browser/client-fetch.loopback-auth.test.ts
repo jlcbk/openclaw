@@ -45,6 +45,25 @@ function stubJsonFetchOk() {
   return fetchMock;
 }
 
+function stubJsonFetchUnauthorized(params?: { hangBody?: boolean }) {
+  const hangBody = params?.hangBody ?? false;
+  const fetchMock = vi.fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>(
+    async () =>
+      ({
+        ok: false,
+        status: 401,
+        text: hangBody
+          ? async () =>
+              await new Promise<string>(() => {
+                // never resolves
+              })
+          : async () => "unauthorized",
+      }) as unknown as Response,
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
 describe("fetchBrowserJson loopback auth", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -151,5 +170,22 @@ describe("fetchBrowserJson loopback auth", () => {
     }
     expect(thrown.message).toContain("Can't reach the OpenClaw browser control service");
     expect(thrown.message).toContain("Do NOT retry the browser tool");
+  });
+
+  it("surfaces absolute URL 401 quickly (auth error, not timeout) even if body hangs", async () => {
+    stubJsonFetchUnauthorized({ hangBody: true });
+
+    const thrown = await fetchBrowserJson<{ ok: boolean }>("http://127.0.0.1:18888/").catch(
+      (err: unknown) => err,
+    );
+
+    expect(thrown).toBeInstanceOf(Error);
+    if (!(thrown instanceof Error)) {
+      throw new Error(`Expected Error, got ${String(thrown)}`);
+    }
+    expect(thrown.message).not.toContain("timed out");
+    expect(thrown.message).not.toContain("Can't reach the OpenClaw browser control service");
+    // Body hangs: we should still surface a quick auth failure, but without hanging on reading the body.
+    expect(thrown.message).toContain("HTTP 401");
   });
 });

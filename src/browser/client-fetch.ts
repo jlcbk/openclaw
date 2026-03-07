@@ -154,6 +154,25 @@ function enhanceBrowserFetchError(url: string, err: unknown, timeoutMs: number):
   );
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+    return await promise;
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timed out")), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
+
 async function fetchHttpJson<T>(
   url: string,
   init: RequestInit & { timeoutMs?: number },
@@ -175,7 +194,10 @@ async function fetchHttpJson<T>(
   try {
     const res = await fetch(url, { ...init, signal: ctrl.signal });
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
+      // Defensive: some servers can keep the error body stream open indefinitely.
+      // Don't let that turn an auth error (401/403) into a misleading timeout.
+      const bodyTimeoutMs = Math.min(1000, Math.max(50, Math.floor(timeoutMs / 3)));
+      const text = await withTimeout(res.text(), bodyTimeoutMs).catch(() => "");
       throw new BrowserServiceError(text || `HTTP ${res.status}`);
     }
     return (await res.json()) as T;
