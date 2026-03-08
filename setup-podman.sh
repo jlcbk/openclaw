@@ -83,7 +83,16 @@ run_as_user() {
   local user="$1"
   shift
   if command -v sudo >/dev/null 2>&1; then
-    sudo -u "$user" "$@"
+    # `sudo -u` inherits the caller's working directory. If the current directory
+    # is not searchable/readable by the target user (e.g. running this script
+    # from a private/unreadable cwd), many commands will fail before they even
+    # start with errors like:
+    #   sudo: ...: cannot chdir to cwd: Permission denied
+    # Ensure we run from a safe, traversable directory.
+    (
+      cd "${TMPDIR:-/tmp}" 2>/dev/null || cd /
+      sudo -u "$user" "$@"
+    )
   elif is_root && command -v runuser >/dev/null 2>&1; then
     runuser -u "$user" -- "$@"
   else
