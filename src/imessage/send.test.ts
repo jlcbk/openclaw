@@ -146,6 +146,12 @@ describe("sendMessageIMessage", () => {
     expect(params.text).toBe("hello");
   });
 
+  it("does not treat internal reply tags as user-visible content", async () => {
+    await expect(sendWithDefaults("chat_id:123", "[[reply_to_current]]\n")).rejects.toThrow(
+      /requires text or media/i,
+    );
+  });
+
   it("normalizes string message_id values from rpc result", async () => {
     requestMock.mockResolvedValue({ ok: true, message_id: "  guid-1  " });
     const result = await sendWithDefaults("chat_id:7", "hello");

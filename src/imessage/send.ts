@@ -139,6 +139,7 @@ export async function sendMessageIMessage(
   if (!message.trim() && !filePath) {
     throw new Error("iMessage send requires text or media");
   }
+
   if (message.trim()) {
     const tableMode = resolveMarkdownTableMode({
       cfg,
@@ -154,6 +155,10 @@ export async function sendMessageIMessage(
     .replace(/\[\[\s*(?:reply_to_current|reply_to\s*:\s*[^\]\n]+)\s*\]\]/gi, "")
     .replace(/[ \t]{2,}/g, " ")
     .replace(/[ \t]*\n[ \t]*/g, "\n");
+
+  if (!message.trim() && !filePath) {
+    throw new Error("iMessage send requires text or media");
+  }
 
   message = prependReplyTagIfNeeded(message, opts.replyToId);
 
