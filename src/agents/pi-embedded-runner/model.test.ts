@@ -446,6 +446,36 @@ describe("resolveModel", () => {
     });
   });
 
+  it("applies provider overrides to openai-codex gpt-5.4 forward-compat models", () => {
+    // Regression guard: forward-compat models should still pick up configured baseUrl/headers,
+    // without losing the Codex-specific API selection.
+    mockOpenAICodexTemplateModel();
+
+    const cfg = {
+      models: {
+        providers: {
+          "openai-codex": {
+            baseUrl: "https://proxy.example.com/v1",
+            headers: { "X-Proxy-Auth": "token-123" },
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    const result = resolveModel("openai-codex", "gpt-5.4", "/tmp/agent", cfg);
+
+    expect(result.error).toBeUndefined();
+    expect(result.model).toMatchObject({
+      provider: "openai-codex",
+      id: "gpt-5.4",
+      api: "openai-codex-responses",
+      baseUrl: "https://proxy.example.com/v1",
+    });
+    expect((result.model as unknown as { headers?: Record<string, string> }).headers).toEqual({
+      "X-Proxy-Auth": "token-123",
+    });
+  });
+
   it("builds an anthropic forward-compat fallback for claude-opus-4-6", () => {
     mockDiscoveredModel({
       provider: "anthropic",
