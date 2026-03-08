@@ -147,6 +147,14 @@ export async function sendMessageIMessage(
     });
     message = convertMarkdownTables(message, tableMode);
   }
+
+  // Do not leak internal directive tags into user-visible iMessage text.
+  // iMessage reply threading is handled via a leading [[reply_to:<id>]] tag we inject below.
+  message = message
+    .replace(/\[\[\s*(?:reply_to_current|reply_to\s*:\s*[^\]\n]+)\s*\]\]/gi, "")
+    .replace(/[ \t]{2,}/g, " ")
+    .replace(/[ \t]*\n[ \t]*/g, "\n");
+
   message = prependReplyTagIfNeeded(message, opts.replyToId);
 
   const params: Record<string, unknown> = {
