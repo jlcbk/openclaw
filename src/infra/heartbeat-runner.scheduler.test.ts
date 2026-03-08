@@ -166,6 +166,47 @@ describe("startHeartbeatRunner", () => {
     runner.stop();
   });
 
+  it("does not advance schedule when a targeted wake returns requests-in-flight", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(0));
+
+    let callCount = 0;
+    const runSpy = vi.fn().mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return { status: "skipped", reason: "requests-in-flight" };
+      }
+      return { status: "ran", durationMs: 1 };
+    });
+
+    const runner = startHeartbeatRunner({
+      cfg: {
+        agents: {
+          defaults: { heartbeat: { every: "30m" } },
+          list: [{ id: "ops", heartbeat: { every: "30m" } }],
+        },
+      } as OpenClawConfig,
+      runOnce: runSpy,
+    });
+
+    // Trigger a targeted wake at t=0. First call returns requests-in-flight.
+    requestHeartbeatNow({ reason: "manual", agentId: "ops", coalesceMs: 0 });
+    await vi.advanceTimersByTimeAsync(1);
+    expect(runSpy).toHaveBeenCalledTimes(1);
+
+    // The wake layer retries after DEFAULT_RETRY_MS (1 s) when it sees
+    // requests-in-flight.
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(runSpy).toHaveBeenCalledTimes(2);
+
+    // The interval tick should still fire at ~t=30m (not be pushed forward by
+    // the targeted requests-in-flight skip + retry).
+    await vi.advanceTimersByTimeAsync(30 * 60_000 + 1_000);
+    expect(runSpy).toHaveBeenCalledTimes(3);
+
+    runner.stop();
+  });
+
   it("does not push nextDueMs forward on repeated requests-in-flight skips", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date(0));
