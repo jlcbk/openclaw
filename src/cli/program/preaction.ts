@@ -37,7 +37,9 @@ const PLUGIN_REQUIRED_COMMANDS = new Set([
   "health",
 ]);
 const CONFIG_GUARD_BYPASS_COMMANDS = new Set(["doctor", "completion", "secrets"]);
-const JSON_PARSE_ONLY_COMMANDS = new Set(["config set"]);
+// Commands where --json is used for input parsing only. These should not
+// trigger stdout suppression because the command may still print human output.
+const JSON_PARSE_ONLY_COMMANDS = new Set(["config set", "acp client"]);
 let configGuardModulePromise: Promise<typeof import("./config-guard.js")> | undefined;
 let pluginRegistryModulePromise: Promise<typeof import("../plugin-registry.js")> | undefined;
 
