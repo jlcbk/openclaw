@@ -364,6 +364,21 @@ agent heartbeats immediately.
 
 Use `--mode next-heartbeat` to wait for the next scheduled tick.
 
+### Automation note (don’t use `openclaw agent --message` as a heartbeat trigger)
+
+If your goal is **“wake the main agent / heartbeat from a script”**, prefer
+`openclaw system event`.
+
+`openclaw agent --message ...` runs a full agent turn and targets a particular
+session. In unattended scripts it is easy to mis-route, duplicate work, or block
+waiting on a response.
+
+Pattern to use in scripts:
+
+```bash
+openclaw system event --mode now --text "Heartbeat: check for urgent follow-ups"
+```
+
 ## Reasoning delivery (optional)
 
 By default, heartbeats deliver only the final “answer” payload.
