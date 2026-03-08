@@ -110,6 +110,18 @@ describe("sendMessageIMessage", () => {
     expect(params.text).toBe("[[reply_to:new-id]] hi there friend");
   });
 
+  it("strips reply tags with whitespace variants", async () => {
+    await sendWithDefaults(
+      "chat_id:123",
+      "hi [[ reply_to_current ]] there [[ reply_to : old-id ]] friend",
+      {
+        replyToId: "new-id",
+      },
+    );
+    const params = getSentParams();
+    expect(params.text).toBe("[[reply_to:new-id]] hi there friend");
+  });
+
   it("rewrites an existing leading reply tag to keep the requested id first", async () => {
     await sendWithDefaults("chat_id:123", " [[reply_to:old-id]] hello", {
       replyToId: "new-id",
