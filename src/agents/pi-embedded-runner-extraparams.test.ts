@@ -1556,4 +1556,21 @@ describe("applyExtraParamsToAgent", () => {
       expect(run().store).toBe(false);
     },
   );
+
+  it("does not force store=true for openai-codex/gpt-5.4 (Codex OAuth) forward-compat models", () => {
+    // Regression guard: gpt-5.4 is frequently used via openai-codex OAuth.
+    // Even though its modelId doesn't include "-codex", it still hits the Codex
+    // backend and must keep store=false.
+    const payload = runResponsesPayloadMutationCase({
+      applyProvider: "openai-codex",
+      applyModelId: "gpt-5.4",
+      model: {
+        api: "openai-codex-responses",
+        provider: "openai-codex",
+        id: "gpt-5.4",
+        baseUrl: "https://chatgpt.com/backend-api",
+      } as Model<"openai-codex-responses">,
+    });
+    expect(payload.store).toBe(false);
+  });
 });
