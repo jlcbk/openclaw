@@ -44,6 +44,17 @@ describe("resolveTranscriptPolicy", () => {
     expect(policy.toolCallIdMode).toBeUndefined();
   });
 
+  it("treats openai-codex as an OpenAI provider (no strict OpenAI-compatible turn ordering)", () => {
+    const policy = resolveTranscriptPolicy({
+      provider: "openai-codex",
+      modelId: "gpt-5.4",
+      modelApi: "openai-completions",
+    });
+    expect(policy.applyGoogleTurnOrdering).toBe(false);
+    expect(policy.validateGeminiTurns).toBe(false);
+    expect(policy.validateAnthropicTurns).toBe(false);
+  });
+
   it("enables strict tool call id sanitization for openai-completions APIs", () => {
     const policy = resolveTranscriptPolicy({
       provider: "openai",
