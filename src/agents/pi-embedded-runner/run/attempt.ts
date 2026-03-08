@@ -490,6 +490,92 @@ function decodeXaiToolCallArgumentsInMessage(message: unknown): void {
   }
 }
 
+// ---------------------------------------------------------------------------
+// OpenAI-style tool calls: parse stringified JSON `arguments`
+// ---------------------------------------------------------------------------
+
+function parseJsonStringToolCallArgumentsInMessage(message: unknown): void {
+  if (!message || typeof message !== "object") {
+    return;
+  }
+  const content = (message as { content?: unknown }).content;
+  if (!Array.isArray(content)) {
+    return;
+  }
+  for (const block of content) {
+    if (!block || typeof block !== "object") {
+      continue;
+    }
+    const typedBlock = block as { type?: unknown; arguments?: unknown };
+    if (typedBlock.type !== "toolCall") {
+      continue;
+    }
+    const rawArgs = typedBlock.arguments;
+    if (typeof rawArgs !== "string") {
+      continue;
+    }
+    const trimmed = rawArgs.trim();
+    if (!trimmed || (trimmed[0] !== "{" && trimmed[0] !== "[")) {
+      continue;
+    }
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        typedBlock.arguments = parsed as Record<string, unknown>;
+      }
+    } catch {
+      // ignore malformed JSON; keep original string so downstream can diagnose
+    }
+  }
+}
+
+function wrapStreamParseJsonStringToolCallArguments(
+  stream: ReturnType<typeof streamSimple>,
+): ReturnType<typeof streamSimple> {
+  const originalResult = stream.result.bind(stream);
+  stream.result = async () => {
+    const message = await originalResult();
+    parseJsonStringToolCallArgumentsInMessage(message);
+    return message;
+  };
+
+  const originalAsyncIterator = stream[Symbol.asyncIterator].bind(stream);
+  (stream as { [Symbol.asyncIterator]: typeof originalAsyncIterator })[Symbol.asyncIterator] =
+    function () {
+      const iterator = originalAsyncIterator();
+      return {
+        async next() {
+          const result = await iterator.next();
+          if (!result.done && result.value && typeof result.value === "object") {
+            const event = result.value as { partial?: unknown; message?: unknown };
+            parseJsonStringToolCallArgumentsInMessage(event.partial);
+            parseJsonStringToolCallArgumentsInMessage(event.message);
+          }
+          return result;
+        },
+        async return(value?: unknown) {
+          return iterator.return?.(value) ?? { done: true as const, value: undefined };
+        },
+        async throw(error?: unknown) {
+          return iterator.throw?.(error) ?? { done: true as const, value: undefined };
+        },
+      };
+    };
+  return stream;
+}
+
+export function wrapStreamFnParseJsonStringToolCallArguments(baseFn: StreamFn): StreamFn {
+  return (model, context, options) => {
+    const maybeStream = baseFn(model, context, options);
+    if (maybeStream && typeof maybeStream === "object" && "then" in maybeStream) {
+      return Promise.resolve(maybeStream).then((stream) =>
+        wrapStreamParseJsonStringToolCallArguments(stream),
+      );
+    }
+    return wrapStreamParseJsonStringToolCallArguments(maybeStream);
+  };
+}
+
 function wrapStreamDecodeXaiToolCallArguments(
   stream: ReturnType<typeof streamSimple>,
 ): ReturnType<typeof streamSimple> {
@@ -1371,6 +1457,12 @@ export async function runEmbeddedAttempt(
       activeSession.agent.streamFn = wrapStreamFnTrimToolCallNames(
         activeSession.agent.streamFn,
         allowedToolNames,
+      );
+
+      // Some OpenAI-compatible backends return tool call arguments as a JSON string
+      // (instead of an object). Parse it to preserve tool calling compat (#39327).
+      activeSession.agent.streamFn = wrapStreamFnParseJsonStringToolCallArguments(
+        activeSession.agent.streamFn,
       );
 
       if (isXaiProvider(params.provider, params.modelId)) {
