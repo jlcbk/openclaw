@@ -537,6 +537,35 @@ describe("sanitizeSessionHistory", () => {
     expect(result[1]?.role).toBe("assistant");
   });
 
+  it("keeps reasoning-only assistant messages for openai-codex-responses", async () => {
+    setNonGoogleModelApi();
+
+    const messages: AgentMessage[] = [
+      makeUserMessage("hello"),
+      makeAssistantMessage(
+        [
+          {
+            type: "thinking",
+            thinking: "reasoning",
+            thinkingSignature: "sig",
+          },
+        ],
+        { stopReason: "aborted" },
+      ),
+    ];
+
+    const result = await sanitizeSessionHistory({
+      messages,
+      modelApi: "openai-codex-responses",
+      provider: "openai-codex",
+      sessionManager: mockSessionManager,
+      sessionId: TEST_SESSION_ID,
+    });
+
+    expect(result).toHaveLength(2);
+    expect(result[1]?.role).toBe("assistant");
+  });
+
   it("synthesizes missing tool results for openai-responses after repair", async () => {
     const messages: AgentMessage[] = [
       makeAssistantMessage([{ type: "toolCall", id: "call_1", name: "read", arguments: {} }], {
