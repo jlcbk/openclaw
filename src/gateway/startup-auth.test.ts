@@ -137,6 +137,31 @@ describe("ensureGatewayStartupAuth", () => {
     });
   });
 
+  it("throws a clearer error when gateway.auth.password SecretRef resolves to a non-string value", async () => {
+    await expect(
+      ensureGatewayStartupAuth({
+        cfg: {
+          gateway: {
+            auth: {
+              mode: "password",
+              password: { source: "file", provider: "default", id: "/password" },
+            },
+          },
+          secrets: {
+            providers: {
+              default: {
+                source: "file",
+                path: "/Users/open/.openclaw/workspace/repos/openclaw/src/gateway/fixtures/secrets.json",
+              },
+            },
+          },
+        },
+        env: {} as NodeJS.ProcessEnv,
+        persist: true,
+      }),
+    ).rejects.toThrow(/gateway\.auth\.password SecretRef/i);
+  });
+
   it("resolves gateway.auth.token SecretRef before startup auth checks", async () => {
     const result = await ensureGatewayStartupAuth({
       cfg: {
