@@ -207,6 +207,50 @@ Behavior details:
 - The main-session summary respects `wakeMode`: `now` triggers an immediate heartbeat and
   `next-heartbeat` waits for the next scheduled heartbeat.
 
+##### Common announce pitfalls (multi-channel)
+
+These are the failure modes that most often look like “cron is broken”, but are actually
+configuration or targeting issues.
+
+1. **Duplicate deliveries when you have multiple session endpoints**
+
+If your agent can reply to more than one endpoint (for example Slack + Telegram, or multiple
+accounts within a channel), using the implicit “last route” delivery target can surprise you.
+
+Recommendations:
+
+- Prefer explicit targets:
+  - Set both `delivery.channel` and `delivery.to` on the job.
+  - For Slack/Discord/Mattermost, use explicit `channel:<id>` / `user:<id>` forms.
+- When testing, temporarily set `delivery.bestEffort: true` so a bad target doesn’t disable the job.
+
+2. **Loopback vs LAN binding (can’t reach the Gateway from other machines)**
+
+`announce` delivery is performed by the Gateway process. If your chat client is on another
+machine (or you use a remote Gateway), ensure your Gateway is reachable:
+
+- Loopback-only binds (`127.0.0.1`) are correct for single-machine setups.
+- For LAN access, use `--bind lan` (or the equivalent config) and confirm your firewall allows the port.
+
+If you can connect locally but not remotely, check `openclaw gateway status` and the Gateway logs for
+the actual bind address.
+
+3. **Delivery-mirror vs real user-visible messages**
+
+Some deployments enable a “delivery mirror” record so you can audit what was sent.
+Depending on the UI/channel, that mirror record may show up as a separate transcript entry.
+
+- This is not a second “send” by cron; it’s a record of an already-sent payload.
+- If your UI shows duplicates, check whether it is rendering mirror entries as if they were
+  normal assistant messages.
+
+4. **Announce does not use the messaging tool**
+
+`announce` bypasses agent tool calls and delivers via the channel adapters.
+If you need rich tool-driven formatting or custom routing, consider `delivery.mode = "webhook"`
+(or have the job run in main session and send via tools), but be aware of the additional
+complexity.
+
 #### Webhook delivery flow
 
 When `delivery.mode = "webhook"`, cron posts the finished event payload to `delivery.to` when the finished event includes a summary.
