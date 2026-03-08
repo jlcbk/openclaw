@@ -291,6 +291,16 @@ describe("tts", () => {
       expect(result.overrides.provider).toBeUndefined();
     });
 
+    it("keeps text intact (and does not claim directives) when overrides are disabled even if [[tts]] appears", () => {
+      const policy = resolveModelOverridePolicy({ enabled: false });
+      const input = "A [[tts]] B";
+      const result = parseTtsDirectives(input, policy);
+
+      expect(result.hasDirective).toBe(false);
+      expect(result.cleanedText).toBe(input);
+      expect(result.overrides).toEqual({});
+    });
+
     it("accepts custom voices and models when openaiBaseUrl is a non-default endpoint", () => {
       const policy = resolveModelOverridePolicy({ enabled: true });
       const input = "Hello [[tts:voice=kokoro-chinese model=kokoro-v1]] world";
