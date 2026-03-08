@@ -19,6 +19,32 @@ describe("renderTable", () => {
     expect(out).toMatch(/[│|] Dashboard\s+[│|]/);
   });
 
+  it("defaults border style based on stdout TTY", () => {
+    const original = Object.getOwnPropertyDescriptor(process.stdout, "isTTY");
+
+    const render = () =>
+      renderTable({
+        width: 30,
+        columns: [{ key: "K", header: "K", minWidth: 3 }],
+        rows: [{ K: "v" }],
+      });
+
+    try {
+      Object.defineProperty(process.stdout, "isTTY", { value: false, configurable: true });
+      const asciiOut = render();
+      expect(asciiOut).toContain("|");
+      expect(asciiOut).not.toContain("│");
+
+      Object.defineProperty(process.stdout, "isTTY", { value: true, configurable: true });
+      const unicodeOut = render();
+      expect(unicodeOut).toContain("│");
+    } finally {
+      if (original) {
+        Object.defineProperty(process.stdout, "isTTY", original);
+      }
+    }
+  });
+
   it("expands flex columns to fill available width", () => {
     const width = 60;
     const out = renderTable({
