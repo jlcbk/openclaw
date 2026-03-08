@@ -596,6 +596,32 @@ describe("resolveModel", () => {
     });
   });
 
+  it("uses codex forward-compat fallback for openai-codex/gpt-5.4 even when provider is configured", () => {
+    // Regression guard: gpt-5.4 is a special case because its id does not contain "-codex",
+    // but it still must route to the Codex Responses backend (openai-codex-responses).
+    const cfg: OpenClawConfig = {
+      models: {
+        providers: {
+          "openai-codex": {
+            baseUrl: "https://custom.example.com",
+            // No models array, or models without gpt-5.3-codex
+          },
+        },
+      },
+    } as unknown as OpenClawConfig;
+
+    expectResolvedForwardCompatFallback({
+      provider: "openai-codex",
+      id: "gpt-5.4",
+      cfg,
+      expectedModel: {
+        api: "openai-codex-responses",
+        id: "gpt-5.4",
+        provider: "openai-codex",
+      },
+    });
+  });
+
   it("includes auth hint for unknown ollama models (#17328)", () => {
     // resetMockDiscoverModels() in beforeEach already sets find → null
     const result = resolveModel("ollama", "gemma3:4b", "/tmp/agent");
