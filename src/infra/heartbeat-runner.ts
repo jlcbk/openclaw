@@ -1151,7 +1151,10 @@ export function startHeartbeatRunner(opts: {
           sessionKey: requestedSessionKey,
           deps: { runtime: state.runtime },
         });
-        if (res.status !== "skipped" || res.reason !== "disabled") {
+        if (
+          res.status !== "skipped" ||
+          (res.reason !== "disabled" && res.reason !== "requests-in-flight")
+        ) {
           advanceAgentSchedule(targetAgent, now);
         }
         scheduleNext();
