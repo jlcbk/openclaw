@@ -239,7 +239,12 @@ export function renderTable(opts: RenderTableOptions): string {
     }
     return next;
   });
-  const border = opts.border ?? "unicode";
+
+  // Some downstream consumers (notably older Node "ByteString"-based header APIs)
+  // can choke on box-drawing characters (e.g. U+2502 │). When output is being
+  // captured/piped (non-TTY), prefer ASCII borders by default.
+  const defaultBorder: RenderTableOptions["border"] = process.stdout.isTTY ? "unicode" : "ascii";
+  const border = opts.border ?? defaultBorder;
   if (border === "none") {
     const columns = opts.columns;
     const header = columns.map((c) => c.header).join(" | ");
