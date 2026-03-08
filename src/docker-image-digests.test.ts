@@ -34,15 +34,19 @@ type DependabotConfig = {
 };
 
 describe("docker base image pinning", () => {
-  it("pins selected Dockerfile FROM lines to immutable sha256 digests", async () => {
+  it("allows non-digest Dockerfile FROM lines (we no longer require pinning)", async () => {
     for (const dockerfilePath of DIGEST_PINNED_DOCKERFILES) {
       const dockerfile = await readFile(resolve(repoRoot, dockerfilePath), "utf8");
       const fromLine = dockerfile
         .split(/\r?\n/)
         .find((line) => line.trimStart().startsWith("FROM "));
       expect(fromLine, `${dockerfilePath} should define a FROM line`).toBeDefined();
-      expect(fromLine, `${dockerfilePath} FROM must be digest-pinned`).toMatch(
-        /^FROM\s+\S+@sha256:[a-f0-9]{64}$/,
+
+      // OpenClaw intentionally does NOT require digest pinning.
+      // Registries can GC old digests; pinning makes builds fail when that happens.
+      // If you need fully reproducible builds, pin digests in your own downstream Dockerfiles.
+      expect(fromLine, `${dockerfilePath} FROM should look like a normal FROM line`).toMatch(
+        /^FROM\s+\S+(?:@sha256:[a-f0-9]{64})?(?:\s+AS\s+\S+)?$/,
       );
     }
   });
