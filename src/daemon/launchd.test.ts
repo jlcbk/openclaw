@@ -10,6 +10,7 @@ import {
   parseLaunchctlPrint,
   repairLaunchAgentBootstrap,
   restartLaunchAgent,
+  resolveGatewayLogPaths,
   resolveLaunchAgentPlistPath,
 } from "./launchd.js";
 
@@ -152,6 +153,19 @@ describe("launchctl list detection", () => {
       env: { HOME: "/Users/test", OPENCLAW_PROFILE: "default" },
     });
     expect(listed).toBe(false);
+  });
+});
+
+describe("resolveGatewayLogPaths", () => {
+  it("uses ~/Library/Logs/openclaw on darwin", () => {
+    const env: Record<string, string | undefined> = { HOME: "/Users/test" };
+    const { logDir, stdoutPath, stderrPath } = resolveGatewayLogPaths(env);
+
+    if (process.platform === "darwin") {
+      expect(logDir).toBe("/Users/test/Library/Logs/openclaw");
+      expect(stdoutPath).toBe("/Users/test/Library/Logs/openclaw/gateway.log");
+      expect(stderrPath).toBe("/Users/test/Library/Logs/openclaw/gateway.err.log");
+    }
   });
 });
 
