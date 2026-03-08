@@ -26,4 +26,13 @@ describe("getBearerToken", () => {
 
     expect(res.ok).toBe(true);
   });
+
+  it("normalizes extra whitespace around bearer token", () => {
+    const req = {
+      socket: { remoteAddress: "127.0.0.1" },
+      headers: { host: "127.0.0.1", authorization: "Bearer   secret\t\r\n" },
+    } as never;
+
+    expect(getBearerToken(req)).toBe("secret");
+  });
 });
