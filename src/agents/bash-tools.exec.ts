@@ -60,6 +60,9 @@ function extractScriptTargetFromCommand(
     return null;
   }
 
+  // We intentionally do not attempt to parse quoted paths with spaces.
+  // This keeps the preflight conservative and avoids false positives.
+
   // Intentionally simple parsing: we only support common forms like
   //   python file.py
   //   python3 -u file.py
@@ -75,6 +78,46 @@ function extractScriptTargetFromCommand(
   }
 
   return null;
+}
+
+function isLikelySourceCodePastedIntoExec(command: string): boolean {
+  // Heuristics (intentionally simple):
+  // - multi-line
+  // - first non-empty line looks like common source code constructs
+  // - and does NOT look like a shell script (shebang)
+  const trimmed = command.trim();
+  if (!trimmed.includes("\n")) {
+    return false;
+  }
+
+  const firstNonEmpty = trimmed
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0);
+
+  if (!firstNonEmpty) {
+    return false;
+  }
+
+  if (firstNonEmpty.startsWith("#!")) {
+    return false;
+  }
+
+  // Python / JS / TS / Go / Rust / Java-ish common starters.
+  if (
+    /^(from\s+\S+\s+import\s+\S+|import\s+\S+|class\s+\w+|def\s+\w+\(|function\s+\w+\(|const\s+\w+\s*=|let\s+\w+\s*=|var\s+\w+\s*=|export\s+|package\s+\w+|use\s+\S+|public\s+class\s+\w+)/.test(
+      firstNonEmpty,
+    )
+  ) {
+    return true;
+  }
+
+  // Also catch fenced blocks pasted into exec: first line is ```lang
+  if (/^```[A-Za-z0-9_-]*$/.test(firstNonEmpty)) {
+    return true;
+  }
+
+  return false;
 }
 
 async function validateScriptFileForShellBleed(params: {
@@ -224,6 +267,24 @@ export function createExecTool(
 
       if (!params.command) {
         throw new Error("Provide a command to start.");
+      }
+
+      // Guardrail: sometimes the model tries to run source code directly through exec
+      // (e.g. a Python file content that starts with `from ...`). That produces
+      // confusing errors like `zsh: command not found: from`.
+      //
+      // We only block *obvious* cases to avoid breaking legitimate multi-line shell scripts.
+      const trimmedCommand = params.command.trim();
+      if (isLikelySourceCodePastedIntoExec(trimmedCommand)) {
+        const head = truncateMiddle(trimmedCommand.replace(/\s+$/u, ""), 260);
+        throw new Error(
+          [
+            "exec refused: this looks like source code, not a shell command.",
+            "If your goal is to create a file, use the file write tool (or redirect into a file) instead of exec.",
+            "First lines:",
+            head,
+          ].join("\n"),
+        );
       }
 
       const maxOutput = DEFAULT_MAX_OUTPUT;
