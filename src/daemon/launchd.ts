@@ -51,9 +51,16 @@ export function resolveGatewayLogPaths(env: GatewayServiceEnv): {
   stdoutPath: string;
   stderrPath: string;
 } {
-  const stateDir = resolveGatewayStateDir(env);
-  const logDir = path.join(stateDir, "logs");
   const prefix = env.OPENCLAW_LOG_PREFIX?.trim() || "gateway";
+
+  // launchd does not expand `~` in StandardOutPath/StandardErrorPath, and it can behave
+  // badly when the target directory is a symlink (e.g. ~/.openclaw -> external volume).
+  // Prefer the macOS convention under ~/Library/Logs where possible.
+  const logDir =
+    process.platform === "darwin"
+      ? path.join(resolveHomeDir(env), "Library", "Logs", "openclaw")
+      : path.join(resolveGatewayStateDir(env), "logs");
+
   return {
     logDir,
     stdoutPath: path.join(logDir, `${prefix}.log`),
