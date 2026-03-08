@@ -206,6 +206,17 @@ describe("registerPreActionHooks", () => {
       runtime: runtimeMock,
       commandPath: ["config", "set"],
     });
+
+    vi.clearAllMocks();
+    await runPreAction({
+      parseArgv: ["acp", "client", "--json"],
+      processArgv: ["node", "openclaw", "acp", "client", "--json"],
+    });
+
+    expect(ensureConfigReadyMock).toHaveBeenCalledWith({
+      runtime: runtimeMock,
+      commandPath: ["acp", "client"],
+    });
   });
 
   it("bypasses config guard for config validate", async () => {
