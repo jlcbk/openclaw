@@ -2,8 +2,20 @@ import type { DiscordComponentEntry, DiscordModalEntry } from "./components.js";
 
 const DEFAULT_COMPONENT_TTL_MS = 30 * 60 * 1000;
 
-const componentEntries = new Map<string, DiscordComponentEntry>();
-const modalEntries = new Map<string, DiscordModalEntry>();
+declare global {
+  // eslint-disable-next-line no-var
+  var __openclawDiscordComponentEntries: Map<string, DiscordComponentEntry> | undefined;
+  // eslint-disable-next-line no-var
+  var __openclawDiscordModalEntries: Map<string, DiscordModalEntry> | undefined;
+}
+
+const componentEntries =
+  globalThis.__openclawDiscordComponentEntries ??
+  (globalThis.__openclawDiscordComponentEntries = new Map<string, DiscordComponentEntry>());
+
+const modalEntries =
+  globalThis.__openclawDiscordModalEntries ??
+  (globalThis.__openclawDiscordModalEntries = new Map<string, DiscordModalEntry>());
 
 function isExpired(entry: { expiresAt?: number }, now: number) {
   return typeof entry.expiresAt === "number" && entry.expiresAt <= now;
